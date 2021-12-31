@@ -1,0 +1,6 @@
+*
+!*.java
+!*/
+!pom.xml
+
+!.gitignore
