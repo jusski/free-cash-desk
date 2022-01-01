@@ -1,27 +1,22 @@
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import lombok.val;
 
-public class FastFoodRestaurant
-{
-	private static final int NUMBER_OF_CASHIERS = 4;
-	private static List<Cashier> cashiers;
-	
-	static
-	{
-		cashiers = new ArrayList<>();
-		for (int i = 0; i < NUMBER_OF_CASHIERS; ++i)
-		{
-			Cashier cashier = new Cashier();
-			new Thread(cashier).start();
-			cashiers.add(cashier);
-		}
-	}
-	
-	public static Collection<Cashier> getCashiers()
-	{
-		return Collections.unmodifiableCollection(cashiers);
-	}
+import java.util.*;
 
+public class FastFoodRestaurant {
+    private static final int           NUMBER_OF_CASHIERS = 4;
+    private static final List<Cashier> cashiers;
+
+    static {
+        cashiers = new ArrayList<>();
+        val random = new Random();
+        for (int i = 0; i < NUMBER_OF_CASHIERS; ++i) {
+            Cashier cashier = new Cashier(i, 1 + random.nextFloat());
+            new Thread(cashier).start();
+            cashiers.add(cashier);
+        }
+    }
+
+    public static Collection<Cashier> getCashiers () {
+        return Collections.unmodifiableCollection(cashiers);
+    }
 }

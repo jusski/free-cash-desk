@@ -1,17 +1,10 @@
-public class Main
-{
-	public static void main(String[] args)
-	{
+import lombok.val;
 
-		Cashier cashier = new Cashier();
-		new Thread(cashier).start();
-		
-		for(int i = 0; i < 2; ++i)
-		{
-            Visitor visitor = new Visitor();			
-			cashier.put(visitor);
-		}
-		
-	}
-
+public class Main {
+    public static void main (String[] args) {
+        for (int i = 0; i < 500; ++i) {
+            val visitor = new Visitor(i);
+            new Thread(visitor).start();
+        }
+    }
 }
