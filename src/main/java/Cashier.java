@@ -87,20 +87,16 @@ public class Cashier implements Runnable {
 
     public Visitor take () {
         if (count.get() == 0) return null;
-        Visitor visitor;
+        Visitor result;
         System.out.printf("[%2d    ] waiting for take next visitor\n", id);
         lock.lock();
         try {
             if (count.get() == 0) return null;
             count.getAndDecrement();
-            Node node = head.next;
-            head.next          = node.next;
-            head.next.previous = head;
-            visitor            = node.item;
-            node.item          = null;
-            node.previous      = node.next = null;
-            int counter = 0;
-            node = head;
+			result = dequeue();
+            
+			int counter = 0;
+            Node node = head;
             while ((node = node.next) != head) {
                 node.positionInQueue.set(counter++);
                 System.out.printf("[%2d %3d] changed position to: %d\n", id, node.item.id, node.positionInQueue.get());
@@ -108,9 +104,21 @@ public class Cashier implements Runnable {
         } finally {
             lock.unlock();
         }
-        System.out.printf("[%2d %3d] took the next visitor\n", id, visitor.id);
-        return visitor;
+        System.out.printf("[%2d %3d] took the next visitor\n", id, result.id);
+        return result;
     }
+
+	private Visitor dequeue()
+	{
+		Visitor visitor;
+		Node node = head.next;
+		head.next = node.next;
+		head.next.previous = head;
+		visitor = node.item;
+		node.item = null;
+		node.previous = node.next = null;
+		return visitor;
+	}
 
     public boolean remove (Visitor visitor) {
         lock.lock();
