@@ -1,5 +1,6 @@
 import lombok.Data;
 import lombok.val;
+import lombok.var;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -31,12 +32,17 @@ public class Cashier implements Runnable {
 
     @Data
     public static class Node {
-        Visitor item;
-        Node    next;
-        Node    previous;
+        public Visitor item;
+        public Node    next;
+        public Node    previous;
+
+        public final AtomicInteger lastPositionInQueue = new AtomicInteger(Integer.MAX_VALUE);
+        public final AtomicInteger positionInQueue     = new AtomicInteger(Integer.MAX_VALUE);
 
         Node (Visitor item) {
-            this.item = item;
+            if ((this.item = item) != null) {
+                item.node = this;
+            }
         }
 
         @Override
@@ -63,11 +69,12 @@ public class Cashier implements Runnable {
             if (count.get() < MAX_QUEUE_LENGTH) {
                 node          = new Node(visitor);
                 node.previous = tail;
+                node.next     = head;
                 tail          = tail.next = node;
-                visitor.positionInQueue.set(count.getAndIncrement());
+                node.positionInQueue.set(count.getAndIncrement());
                 visitor.cashier = this;
-                val position     = visitor.positionInQueue.get();
-                val lastPosition = visitor.lastPositionInQueue.get();
+                val position     = node.positionInQueue.get();
+                val lastPosition = node.lastPositionInQueue.get();
                 System.out.printf("[%2d %3d] put to position: %d (%d)\n", id, visitor.id, position, lastPosition - position);
                 if (position == 0) notEmpty.signal();
             }
@@ -85,18 +92,14 @@ public class Cashier implements Runnable {
         try {
             if (count.get() == 0) return null;
             count.getAndDecrement();
-            Node first = head;
-            head       = head.next;
-            first.next = null;
-            visitor    = head.item;
-            head.item  = null;
-
-            Node node    = head.next;
-            int  counter = 0;
-            while (node != null) {
-                node.item.positionInQueue.set(counter++);
-                System.out.printf("[%2d %3d] changed position to: %d\n", id, node.item.id, node.item.positionInQueue.get());
-                node = node.next;
+            Node node = head.next;
+            head.next = node.next;
+            visitor   = node.item;
+            node.item = null;
+            int counter = 0;
+            while ((node = node.next) != head) {
+                node.positionInQueue.set(counter++);
+                System.out.printf("[%2d %3d] changed position to: %d\n", id, node.item.id, node.positionInQueue.get());
             }
         } finally {
             lock.unlock();
@@ -105,36 +108,27 @@ public class Cashier implements Runnable {
         return visitor;
     }
 
-    public void remove (Visitor visitor) {
-        System.out.printf("[%2d %3d] waiting for remove\n", id, visitor.id);
-        visitor.lastPositionInQueue.set(visitor.positionInQueue.get());
+    public boolean remove (Visitor visitor) {
         lock.lock();
         try {
-            Node node     = head.next;
-            Node previous = head;
-            while (node != null) {
-                if (node.item == visitor) { // reference equals should be ok.
-                    previous.next = node.next;
-                    node.item     = null;
-                    node.next     = node;
-                    if (node == tail) tail = previous;
-                    count.getAndDecrement();
+            if (visitor == null || visitor.node == null) return false;
+            System.out.printf("[%2d %3d] waiting for remove\n", id, visitor.id);
 
-                    node = previous.next;
-                    while (node != null) {
-                        node.item.positionInQueue.getAndDecrement();
-                        node = node.next;
-                    }
-                    break;
-                }
-                previous = node;
-                node     = node.next;
+            var node = visitor.node;
+            node.lastPositionInQueue.set(node.positionInQueue.get());
+            var second = node.next;
+            node.previous.next = second;
+            System.out.printf("[%2d %3d] removed (position: %d)\n", id, visitor.id, node.positionInQueue.get());
+            node.item = null;
+            node.next = null;
+            count.getAndDecrement();
+            while ((node = second) != head) {
+                node.positionInQueue.getAndDecrement();
             }
-
         } finally {
             lock.unlock();
         }
-        System.out.printf("[%2d %3d] removed (position: %d)\n", id, visitor.id, visitor.positionInQueue.get());
+        return true;
     }
 
     @Override

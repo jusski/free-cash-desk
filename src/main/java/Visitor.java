@@ -9,10 +9,9 @@ public class Visitor implements Runnable {
     private          Collection<Cashier> cashiers;
     public           Cashier             cashier;
     private volatile boolean             served = false;
+    public volatile  Cashier.Node        node   = null;
 
-    public       int           id;
-    public final AtomicInteger lastPositionInQueue = new AtomicInteger(Integer.MAX_VALUE);
-    public final AtomicInteger positionInQueue     = new AtomicInteger(Integer.MAX_VALUE);
+    public int id;
 
     Visitor (int id) {
         this.id = id;
@@ -21,7 +20,7 @@ public class Visitor implements Runnable {
     public boolean standInQueue () throws ExceptionUtils {
         val cashier = cashiers.stream()
                 .min(Comparator.comparingLong(Cashier::getQueueLength))
-                .filter(e -> e.getQueueLength() < positionInQueue.get())
+                .filter(e -> node == null || e.getQueueLength() < node.positionInQueue.get())
                 .orElseThrow(ExceptionUtils::new);
         return cashier.enterQueue(this);
     }
@@ -51,7 +50,7 @@ public class Visitor implements Runnable {
                 Thread.sleep(10); // thread sleep?
                 Cashier cashierWithSmallestQueueLength = cashiers.stream()
                         .min(Comparator.comparingInt(Cashier::getQueueLength))
-                        .filter(e -> e.getQueueLength() < positionInQueue.get())
+                        .filter(e -> node == null || e.getQueueLength() < node.positionInQueue.get())
                         .orElse(cashier);
                 if (cashier != cashierWithSmallestQueueLength) {
                     System.out.printf("[%2d %3d] cashier with the smallest queue: %d (len = %d)\n",
