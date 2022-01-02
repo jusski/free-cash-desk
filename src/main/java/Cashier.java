@@ -11,8 +11,7 @@ public class Cashier implements Runnable {
 
     private final AtomicInteger count = new AtomicInteger();
     public        float         speed = 1.f;
-    private       Node          head;
-    private       Node          tail;
+    private final Node          head;
 
     public int id;
 
@@ -39,9 +38,9 @@ public class Cashier implements Runnable {
         public final AtomicInteger lastPositionInQueue = new AtomicInteger(Integer.MAX_VALUE);
         public final AtomicInteger positionInQueue     = new AtomicInteger(Integer.MAX_VALUE);
 
-        Node (Visitor item) {
-            if ((this.item = item) != null) {
-                item.node = this;
+        Node (Visitor visitor) {
+            if ((this.item = visitor) != null) {
+                visitor.node = this;
             }
         }
 
@@ -52,9 +51,8 @@ public class Cashier implements Runnable {
     }
 
     public Cashier () {
-        head          = tail = new Node(null);
-        head.next     = tail;
-        tail.previous = head;
+        head          = new Node(null);
+        head.previous = head.next = head;
     }
 
     private final ReentrantLock lock     = new ReentrantLock();
@@ -68,9 +66,12 @@ public class Cashier implements Runnable {
         try {
             if (count.get() < MAX_QUEUE_LENGTH) {
                 node          = new Node(visitor);
-                node.previous = tail;
+                node.previous = head.previous;
                 node.next     = head;
-                tail          = tail.next = node;
+
+                node.next.previous = node;
+                node.previous.next = node;
+
                 node.positionInQueue.set(count.getAndIncrement());
                 visitor.cashier = this;
                 val position     = node.positionInQueue.get();
@@ -93,10 +94,13 @@ public class Cashier implements Runnable {
             if (count.get() == 0) return null;
             count.getAndDecrement();
             Node node = head.next;
-            head.next = node.next;
-            visitor   = node.item;
-            node.item = null;
+            head.next          = node.next;
+            head.next.previous = head;
+            visitor            = node.item;
+            node.item          = null;
+            node.previous      = node.next = null;
             int counter = 0;
+            node = head;
             while ((node = node.next) != head) {
                 node.positionInQueue.set(counter++);
                 System.out.printf("[%2d %3d] changed position to: %d\n", id, node.item.id, node.positionInQueue.get());
