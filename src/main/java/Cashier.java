@@ -126,6 +126,14 @@ public class Cashier implements Runnable
 		{
 			Visitor visitor = remove();
 			visitor.served = true;
+			try
+			{
+				Thread.sleep(100);
+			}
+			catch (InterruptedException e)
+			{
+				ExceptionUtils.rethrowUnchecked(e);
+			}
 		}
 
 	}

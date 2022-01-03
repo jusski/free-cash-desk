@@ -13,7 +13,7 @@ public class Visitor implements Runnable
 					.min(Comparator.comparingInt(Cashier::getQueueLength))
 					.get();
 			if(cashier.tryAdd(this)) break;
-			Thread.sleep(100);
+			Thread.sleep(10);
 		}
 
 	}
@@ -37,6 +37,7 @@ public class Visitor implements Runnable
 						cashier.writeLock.lock();
 						if (cashierWithMinimalQueue.writeLock.tryLock())
 						{
+							if(cashier.indexOf(this) > cashierWithMinimalQueue.getQueueLength())
 							cashier.remove(this);
 
 							cashierWithMinimalQueue.add(this);

@@ -19,7 +19,7 @@ public class FastFoodRestaurant {
         }
     }
 
-    public static Collection<Cashier> getCashiers () {
-        return Collections.unmodifiableCollection(cashiers);
+    public static ArrayList<Cashier> getCashiers () {
+        return cashiers;
     }
 }
