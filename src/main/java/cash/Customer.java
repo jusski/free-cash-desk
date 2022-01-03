@@ -9,10 +9,11 @@ import java.util.Comparator;
 public class Customer implements Runnable {
     private         Collection<Cashier> cashiers;
     public          Cashier             cashier;
-    public volatile boolean             served       = false;
-    public volatile Cashier.Node        node         = null;
-    public          long                totalServiceTime = 0;
-    public          long                totalServiceInLastCashier = 0;
+    public volatile boolean             served             = false;
+    public volatile Node                node               = null;
+    public          long                putInQueueTime     = 0;
+    public          long                putInLastQueueTime = 0;
+    public          long                sleep              = 10;
 
     public int id;
 
@@ -24,11 +25,18 @@ public class Customer implements Runnable {
         cashiers = FastFoodRestaurant.getCashiers();
     }
 
+    public long getSpentTimeInQueue () {
+        return putInQueueTime == 0 ? 0 : System.currentTimeMillis() - putInQueueTime;
+    }
+
+    public long getSpentTimeInLastQueue () {
+        return putInLastQueueTime == 0 ? 0 : System.currentTimeMillis() - putInLastQueueTime;
+    }
+
     public void run () {
-        log.debug(String.format("[   %3d]+ visitor enter", id));
+        log.debug(String.format("[   %3d] +enter", id));
         enterFastFoodRestaurant();
         try {
-            long sleep = 10;
             while (!served) {
                 Thread.sleep(sleep);
                 Cashier queue = cashiers.stream()
@@ -36,17 +44,19 @@ public class Customer implements Runnable {
                         .filter(e -> node == null || e.getQueueLength() < node.positionInQueue.get())
                         .orElse(cashier);
                 if (cashier != queue) {
-                    log.debug(String.format("[%2d %3d] cashier with the smallest queue: %d (len = %d)",
-                            queue.id, id, queue.id,
-                            queue.getQueueLength()));
-                    if (cashier != null) cashier.remove(this);
-                    queue.put(this);
-                    sleep = 10;
-                } else {
-                    sleep = Math.min(1024, sleep << 1);
+                    log.debug(String.format("[%2d %3d] min queue len: %d (sleep: %d)",
+                            queue.id, id, queue.getQueueLength(), sleep));
+                    if (cashier != null) {
+                        cashier.remove(this);
+                    }
+                    if (queue.put(this) == null) {
+                        sleep = Math.min(512, sleep << 1);
+                    } else {
+                        sleep = 10;
+                    }
                 }
             }
         } catch (Exception ignored) {}
-        log.debug(String.format("[   %3d]- visitor leave", id));
+        log.debug(String.format("[   %3d] -leave", id));
     }
 }

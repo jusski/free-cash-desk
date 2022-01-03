@@ -1,55 +1,37 @@
 package cash;
 
-import lombok.Data;
 import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import lombok.var;
 
-import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static cash.FastFoodRestaurant.random;
+
 @Log4j2
 public class Cashier implements Runnable {
-    static final int MAX_QUEUE_LENGTH = 10;
 
-    private final AtomicInteger count = new AtomicInteger();
-    public        float         speed = 1.f;
+
+    private final AtomicInteger count    = new AtomicInteger();
     private final Node          head;
+    private final ReentrantLock lock     = new ReentrantLock(true);
+    private final Condition     notEmpty = lock.newCondition();
 
+    public int           maxQueueLength;
+    public long          maxTimeCustomerSpentInQueue = 0;
+    public float         speed                       = 1.f;
     public int           id;
-    public AtomicInteger servedVisitors = new AtomicInteger();
+    public AtomicInteger nServed                     = new AtomicInteger();
 
-    public Cashier (int id, float speed) {
+
+    public Cashier (int id, float speed, int maxQueueLength) {
         this();
-        this.id    = id;
-        this.speed = speed;
-    }
-
-    public int getQueueLength () {
-        return count.get();
-    }
-
-    @Data
-    public static class Node {
-        public Customer item;
-        public Node     next;
-        public Node     previous;
-
-        public final AtomicInteger lastPositionInQueue = new AtomicInteger(Integer.MAX_VALUE);
-        public final AtomicInteger positionInQueue     = new AtomicInteger(Integer.MAX_VALUE);
-
-        Node (Customer customer) {
-            if ((this.item = customer) != null) {
-                customer.node = this;
-            }
-        }
-
-        @Override
-        public String toString () {
-            return "";
-        }
+        this.id             = id;
+        this.speed          = speed;
+        this.maxQueueLength = maxQueueLength;
     }
 
     public Cashier () {
@@ -57,11 +39,52 @@ public class Cashier implements Runnable {
         head.previous = head.next = head;
     }
 
-    private final ReentrantLock lock     = new ReentrantLock();
-    private final Condition     notEmpty = lock.newCondition();
+    @Override
+    public void run () {
+        log.debug(String.format("[%2d    ] cashier started", id));
+        Customer customer;
+        while (true) {
+            while ((customer = take()) != null) {
+                try {
+                    serviceCustomer(customer);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                customer.cashier.maxTimeCustomerSpentInQueue
+                        = Math.max(customer.cashier.maxTimeCustomerSpentInQueue, customer.getSpentTimeInLastQueue());
+            }
+            lock.lock();
+            log.debug(String.format("[%2d    ]   lock (run)", id));
+            try {
+//                notEmpty.await();
+                notEmpty.await(50, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                ExceptionUtils.rethrowUnchecked(e);
+            } finally {
+                lock.unlock();
+                log.debug(String.format("[%2d    ] unlock (run)", id));
+            }
+        }
+    }
+
+    public int getQueueLength () {
+        return count.get();
+    }
+
+    public Customer get (int index) {
+        if (index >= count.get()) return null;
+        int counter = 0;
+        var node    = head;
+        while ((node = node.next) != head) {
+            if (counter++ == index) {
+                return node.item;
+            }
+        }
+        return null;
+    }
 
     public Node put (Customer customer) {
-        if (count.get() >= MAX_QUEUE_LENGTH) return null;
+        if (count.get() >= maxQueueLength) return null;
         log.debug(String.format("[%2d %3d] waiting for put", id, customer.id));
         lock.lock();
         log.debug(String.format("[%2d %3d]   lock (put)", id, customer.id));
@@ -69,7 +92,7 @@ public class Cashier implements Runnable {
         Node node = null;
         try {
             var cnt = count.get();
-            if (cnt < MAX_QUEUE_LENGTH) {
+            if (cnt < maxQueueLength) {
                 node          = new Node(customer);
                 node.previous = head.previous;
                 node.next     = head;
@@ -78,7 +101,11 @@ public class Cashier implements Runnable {
                 node.previous.next = node;
 
                 node.positionInQueue.set(count.getAndIncrement());
-                customer.cashier = this;
+                customer.cashier            = this;
+                customer.putInLastQueueTime = System.currentTimeMillis();
+                if (customer.putInLastQueueTime == 0) {
+                    customer.putInQueueTime = customer.putInLastQueueTime;
+                }
                 val position     = node.positionInQueue.get();
                 val lastPosition = node.lastPositionInQueue.get();
                 log.debug(String.format("[%2d %3d] put to position: %d (%d)", id, customer.id, position, lastPosition - position));
@@ -154,35 +181,10 @@ public class Cashier implements Runnable {
         return true;
     }
 
-    public void serviceCustomer (Customer customer) {
-        try {
-            Thread.sleep((long) (new Random().nextInt(100) / speed));
-            servedVisitors.getAndIncrement();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+    public void serviceCustomer (Customer customer) throws InterruptedException {
+        Thread.sleep((long) (random.nextInt(100) / speed));
+        nServed.getAndIncrement();
         customer.served = true;
         log.debug(String.format("[%2d %3d] Food is offered, %d", id, customer.id, Thread.currentThread().getId()));
-    }
-
-    @Override
-    public void run () {
-        log.debug(String.format("[%2d    ] cashier started", id));
-        Customer customer;
-        while (true) {
-            while ((customer = take()) != null) {
-                serviceCustomer(customer);
-            }
-            lock.lock();
-            log.debug(String.format("[%2d    ]   lock (run)", id));
-            try {
-                notEmpty.await();
-            } catch (InterruptedException e) {
-                ExceptionUtils.rethrowUnchecked(e);
-            } finally {
-                lock.unlock();
-                log.debug(String.format("[%2d    ] unlock (run)", id));
-            }
-        }
     }
 }
