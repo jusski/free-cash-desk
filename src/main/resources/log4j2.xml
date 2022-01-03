@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn">
+    <Properties>
+        <Property name="basePath">${env:LOCALAPPDATA}/PokerPrompt/Server/log</Property>
+    </Properties>
+    <Appenders>
+        <RollingFile name="fileLogger"
+                     fileName="${basePath}/debug.log"
+                     filePattern="${basePath}/debug-%d{yyyy-MM-dd_HHmm}.log">
+            <PatternLayout pattern="[%-5level] %d{dd HH:mm:ss.SS} [%t] %c{1} - %msg%n"/>
+            <Policies>
+                <OnStartupTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="20 MB"/>
+            </Policies>
+        </RollingFile>
+        <JDBC name="SQLDatabase" tableName="LOGS">
+            <DriverManager connectionString="jdbc:sqlite:${basePath}/logs.db"/>
+            <Column name="LOG_ID" pattern="%u" isUnicode="false"/>
+            <Column name="ENTRY_DATE" isEventTimestamp="true"/>
+            <Column name="LOGGER" pattern="%logger" isUnicode="false"/>
+            <Column name="LOG_LEVEL" pattern="%level" isUnicode="false"/>
+            <Column name="MESSAGE" pattern="%m" isUnicode="false"/>
+            <Column name="EXCEPTION" pattern="%throwable" isUnicode="false"/>
+        </JDBC>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%-5level] %d{mm:ss.SS} [%t] %c{1} - %msg%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="info" additivity="false">
+            <appender-ref ref="console"/>
+            <appender-ref ref="fileLogger"/>
+<!--            <appender-ref ref="SQLDatabase"/>-->
+        </Root>
+        <Logger name="cash" level="debug" additivity="false">
+            <appender-ref ref="console"/>
+<!--            <appender-ref ref="fileLogger"/>-->
+<!--            <appender-ref ref="SQLDatabase"/>-->
+        </Logger>
+    </Loggers>
+</Configuration>
