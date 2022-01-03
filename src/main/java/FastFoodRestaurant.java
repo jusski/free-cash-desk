@@ -1,16 +1,19 @@
-import lombok.val;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class FastFoodRestaurant {
     private static final int           NUMBER_OF_CASHIERS = 4;
-    private static final List<Cashier> cashiers;
+    private static final ArrayList<Cashier> cashiers;
+    public static final ReentrantLock restaurantLock = new ReentrantLock();
+    public static final Condition queueChanged = restaurantLock.newCondition();
 
     static {
         cashiers = new ArrayList<>();
-        val random = new Random();
         for (int i = 0; i < NUMBER_OF_CASHIERS; ++i) {
-            Cashier cashier = new Cashier(i, 1 + random.nextFloat());
+            Cashier cashier = new Cashier();
             new Thread(cashier).start();
             cashiers.add(cashier);
         }
