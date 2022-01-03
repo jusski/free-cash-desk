@@ -1,3 +1,4 @@
+package cash;
 
 public class ExceptionUtils extends Throwable {
 	@SuppressWarnings("unchecked")

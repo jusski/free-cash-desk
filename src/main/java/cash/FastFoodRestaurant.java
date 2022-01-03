@@ -1,3 +1,5 @@
+package cash;
+
 import lombok.val;
 
 import java.util.*;
