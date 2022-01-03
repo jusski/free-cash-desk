@@ -62,9 +62,12 @@ public class Cashier implements Runnable {
         if (count.get() == MAX_QUEUE_LENGTH) return null;
         System.out.printf("[%2d %3d] waiting for put\n", id, visitor.id);
         lock.lock();
+        System.out.printf("[%2d %3d]   lock (put)\n", id, visitor.id);
+        if (visitor.served) return null;
         Node node = null;
         try {
-            if (count.get() < MAX_QUEUE_LENGTH) {
+            var cnt = count.get();
+            if (cnt <= MAX_QUEUE_LENGTH) {
                 node          = new Node(visitor);
                 node.previous = head.previous;
                 node.next     = head;
@@ -77,10 +80,11 @@ public class Cashier implements Runnable {
                 val position     = node.positionInQueue.get();
                 val lastPosition = node.lastPositionInQueue.get();
                 System.out.printf("[%2d %3d] put to position: %d (%d)\n", id, visitor.id, position, lastPosition - position);
-                if (position == 0) notEmpty.signal();
+                if (cnt == 0) notEmpty.signal();
             }
         } finally {
             lock.unlock();
+            System.out.printf("[%2d %3d] unlock (put)\n", id, visitor.id);
         }
         return node;
     }
@@ -90,40 +94,40 @@ public class Cashier implements Runnable {
         Visitor result;
         System.out.printf("[%2d    ] waiting for take next visitor\n", id);
         lock.lock();
+        System.out.printf("[%2d    ]   lock (take)\n", id);
         try {
             if (count.get() == 0) return null;
             count.getAndDecrement();
-			result = dequeue();
-            
-			int counter = 0;
-            Node node = head;
+            result = dequeue();
+            int  counter = 0;
+            Node node    = head;
             while ((node = node.next) != head) {
                 node.positionInQueue.set(counter++);
                 System.out.printf("[%2d %3d] changed position to: %d\n", id, node.item.id, node.positionInQueue.get());
             }
         } finally {
             lock.unlock();
+            System.out.printf("[%2d    ] unlock (take)\n", id);
         }
         System.out.printf("[%2d %3d] took the next visitor\n", id, result.id);
         return result;
     }
 
-	private Visitor dequeue()
-	{
-		Visitor visitor;
-		Node node = head.next;
-		head.next = node.next;
-		head.next.previous = head;
-		visitor = node.item;
-		node.item = null;
-		node.previous = node.next = null;
-		return visitor;
-	}
+    private Visitor dequeue () {
+        Node node = head.next;
+        head.next          = node.next;
+        head.next.previous = head;
+        Visitor result = node.item;
+        node.item     = null;
+        node.previous = node.next = null;
+        return result;
+    }
 
     public boolean remove (Visitor visitor) {
         lock.lock();
         try {
-            if (visitor == null || visitor.node == null) return false;
+            if (visitor == null || visitor.node == null || visitor.served) return false;
+            System.out.printf("[%2d %3d]   lock (remove)\n", id, visitor.id);
             System.out.printf("[%2d %3d] waiting for remove\n", id, visitor.id);
 
             var node = visitor.node;
@@ -139,6 +143,7 @@ public class Cashier implements Runnable {
             }
         } finally {
             lock.unlock();
+            System.out.printf("[%2d %3d] unlock (remove)\n", id, visitor.id);
         }
         return true;
     }
@@ -152,12 +157,14 @@ public class Cashier implements Runnable {
                 visitor.offerFood();
             }
             lock.lock();
+            System.out.printf("[%2d    ]   lock (run)\n", id);
             try {
                 notEmpty.await();
             } catch (InterruptedException e) {
                 ExceptionUtils.rethrowUnchecked(e);
             } finally {
                 lock.unlock();
+                System.out.printf("[%2d    ] unlock (run)\n", id);
             }
         }
     }

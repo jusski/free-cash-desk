@@ -6,10 +6,10 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Visitor implements Runnable {
-    private          Collection<Cashier> cashiers;
-    public           Cashier             cashier;
-    private volatile boolean             served = false;
-    public volatile  Cashier.Node        node   = null;
+    private         Collection<Cashier> cashiers;
+    public          Cashier             cashier;
+    public volatile boolean             served = false;
+    public volatile Cashier.Node        node   = null;
 
     public int id;
 
@@ -17,11 +17,11 @@ public class Visitor implements Runnable {
         this.id = id;
     }
 
-    public boolean standInQueue () throws ExceptionUtils {
+    public boolean standInQueue () {
         val cashier = cashiers.stream()
                 .min(Comparator.comparingLong(Cashier::getQueueLength))
                 .filter(e -> node == null || e.getQueueLength() < node.positionInQueue.get())
-                .orElseThrow(ExceptionUtils::new);
+                .orElseThrow(RuntimeException::new);
         return cashier.enterQueue(this);
     }
 
@@ -31,7 +31,7 @@ public class Visitor implements Runnable {
 
     public void offerFood () {
         try {
-            Thread.sleep((long) (new Random().nextInt(1000) / cashier.speed));
+            Thread.sleep((long) (new Random().nextInt(100) / cashier.speed));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -59,7 +59,7 @@ public class Visitor implements Runnable {
                     final boolean b = cashierWithSmallestQueueLength.enterQueue(this);
                 }
             }
-        } catch (InterruptedException | ExceptionUtils e) {
+        } catch (InterruptedException e) {
             ExceptionUtils.rethrowUnchecked(e);
         }
         System.out.printf("[   %3d]- visitor leave\n", id);
