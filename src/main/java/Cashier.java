@@ -8,9 +8,9 @@ public class Cashier implements Runnable
 {
 	static final int MAX_QUEUE_LENGTH = 10;
 
-	private ArrayList<Visitor> queue = new ArrayList<>(MAX_QUEUE_LENGTH);
+	public ArrayList<Visitor> queue = new ArrayList<>(MAX_QUEUE_LENGTH);
 
-	private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+	public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
 	
 	public ReadLock readLock = lock.readLock();
 	public WriteLock writeLock = lock.writeLock();
@@ -65,17 +65,19 @@ public class Cashier implements Runnable
 	
 	public boolean tryAdd(Visitor visitor)
 	{
+		boolean result = false;
 		if (writeLock.tryLock())
 		{
 			if (queue.size() < MAX_QUEUE_LENGTH)
 			{
 				queue.add(visitor);
 				notEmpty.signal();
+				result = true;
 			}
 			writeLock.unlock();
 		}
 
-		return false;
+		return result;
 	}
 	
 	public Visitor remove()

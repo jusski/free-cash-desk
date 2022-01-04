@@ -9,10 +9,9 @@ public class Visitor implements Runnable
 	{
 		while (true)
 		{
-			cashier = FastFoodRestaurant.getCashiers().stream()
-					.min(Comparator.comparingInt(Cashier::getQueueLength))
+			cashier = FastFoodRestaurant.getCashiers().stream().min(Comparator.comparingInt(Cashier::getQueueLength))
 					.get();
-			if(cashier.tryAdd(this)) break;
+			if (cashier.tryAdd(this)) break;
 			Thread.sleep(10);
 		}
 
@@ -27,9 +26,8 @@ public class Visitor implements Runnable
 			{
 				Thread.sleep(100);
 
-			   Cashier cashierWithMinimalQueue = FastFoodRestaurant.getCashiers().stream()
-						.min(Comparator.comparingInt(Cashier::getQueueLength))
-						.get();
+				Cashier cashierWithMinimalQueue = FastFoodRestaurant.getCashiers().stream()
+						.min(Comparator.comparingInt(Cashier::getQueueLength)).get();
 				if (cashier.indexOf(this) > cashierWithMinimalQueue.getQueueLength())
 				{
 					try
@@ -37,8 +35,7 @@ public class Visitor implements Runnable
 						cashier.writeLock.lock();
 						if (cashierWithMinimalQueue.writeLock.tryLock())
 						{
-							if(cashier.indexOf(this) > cashierWithMinimalQueue.getQueueLength())
-							cashier.remove(this);
+							if (cashier.indexOf(this) > cashierWithMinimalQueue.getQueueLength()) cashier.remove(this);
 
 							cashierWithMinimalQueue.add(this);
 							cashierWithMinimalQueue.writeLock.unlock();

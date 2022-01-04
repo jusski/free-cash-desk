@@ -1,3 +1,4 @@
+package cash;
 import java.util.ArrayList;
 
 public class ConsoleUtils
