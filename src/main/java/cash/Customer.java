@@ -38,14 +38,14 @@ public class Customer implements Runnable {
         enterFastFoodRestaurant();
         try {
             while (!served) {
-                Thread.sleep(sleep);
+//                Thread.sleep(sleep);
                 Cashier queue = cashiers.stream()
                         .min(Comparator.comparingInt(Cashier::getQueueLength))
                         .filter(e -> node == null || e.getQueueLength() < node.positionInQueue.get())
                         .orElse(cashier);
                 if (cashier != queue) {
-                    log.debug(String.format("[%2d %3d] min queue len: %d (sleep: %d)",
-                            queue.id, id, queue.getQueueLength(), sleep));
+//                    log.debug(String.format("[%2d %3d] min queue len: %d (sleep: %d)",
+//                            queue.id, id, queue.getQueueLength(), sleep));
                     if (cashier != null) {
                         cashier.remove(this);
                     }
@@ -56,7 +56,10 @@ public class Customer implements Runnable {
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("put interrupted");
+        }
         log.debug(String.format("[   %3d] -leave", id));
     }
 }

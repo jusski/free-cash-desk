@@ -4,6 +4,7 @@ import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import lombok.var;
 
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -16,27 +17,26 @@ public class Cashier implements Runnable {
 
 
     private final AtomicInteger count    = new AtomicInteger();
-    private final Node          head;
+    private final Node          head     = new Node(null);
     private final ReentrantLock lock     = new ReentrantLock(true);
+    private final Semaphore     semaphore;
     private final Condition     notEmpty = lock.newCondition();
 
+    public int           id;
+    public float         speed;
     public int           maxQueueLength;
     public long          maxTimeCustomerSpentInQueue = 0;
-    public float         speed                       = 1.f;
-    public int           id;
+    public long          waitingForLockTime          = 0;
+    public long          maxWaitingForLockTime       = 0;
     public AtomicInteger nServed                     = new AtomicInteger();
 
 
     public Cashier (int id, float speed, int maxQueueLength) {
-        this();
         this.id             = id;
         this.speed          = speed;
         this.maxQueueLength = maxQueueLength;
-    }
-
-    public Cashier () {
-        head          = new Node(null);
-        head.previous = head.next = head;
+        semaphore           = new Semaphore(maxQueueLength);
+        head.previous       = head.next = head;
     }
 
     @Override
@@ -53,10 +53,13 @@ public class Cashier implements Runnable {
                 customer.cashier.maxTimeCustomerSpentInQueue
                         = Math.max(customer.cashier.maxTimeCustomerSpentInQueue, customer.getSpentTimeInLastQueue());
             }
+
+            var time = System.currentTimeMillis();
             lock.lock();
+            waitingForLockTime    = System.currentTimeMillis() - time;
+            maxWaitingForLockTime = Math.max(maxWaitingForLockTime, waitingForLockTime);
             log.debug(String.format("[%2d    ]   lock (run)", id));
             try {
-//                notEmpty.await();
                 notEmpty.await(50, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 ExceptionUtils.rethrowUnchecked(e);
@@ -83,12 +86,14 @@ public class Cashier implements Runnable {
         return null;
     }
 
-    public Node put (Customer customer) {
+    public Node put (Customer customer) throws InterruptedException {
         if (count.get() >= maxQueueLength) return null;
-        log.debug(String.format("[%2d %3d] waiting for put", id, customer.id));
+        log.debug(String.format("[%2d %3d] waiting for semaphore (put)", id, customer.id));
+        semaphore.acquire();
+        log.debug(String.format("[%2d %3d] waiting for lock (put)", id, customer.id));
         lock.lock();
         log.debug(String.format("[%2d %3d]   lock (put)", id, customer.id));
-        if (customer.served) return null;
+//        if (customer.served) return null;
         Node node = null;
         try {
             var cnt = count.get();
@@ -122,7 +127,10 @@ public class Cashier implements Runnable {
         if (count.get() == 0) return null;
         Customer result;
         log.debug(String.format("[%2d    ] waiting for take next visitor", id));
+        var time = System.currentTimeMillis();
         lock.lock();
+        waitingForLockTime    = System.currentTimeMillis() - time;
+        maxWaitingForLockTime = Math.max(maxWaitingForLockTime, waitingForLockTime);
         log.debug(String.format("[%2d    ]   lock (take)", id));
         try {
             if (count.get() == 0) return null;
@@ -134,6 +142,8 @@ public class Cashier implements Runnable {
                 node.positionInQueue.set(counter++);
                 log.debug(String.format("[%2d %3d] changed position to: %d", id, node.item.id, node.positionInQueue.get()));
             }
+            semaphore.release();
+            log.debug(String.format("[%2d %3d] semaphore release (take)", id, node.item.id));
         } finally {
             lock.unlock();
             log.debug(String.format("[%2d    ] unlock (take)", id));
@@ -174,6 +184,8 @@ public class Cashier implements Runnable {
             while ((node = node.next) != head) {
                 node.positionInQueue.getAndDecrement();
             }
+            semaphore.release();
+            log.debug(String.format("[%2d %3d] semaphore release (remove)", id, customer.id));
         } finally {
             lock.unlock();
             log.debug(String.format("[%2d %3d] unlock (remove)", id, customer.id));

@@ -3,7 +3,6 @@ package cash;
 import lombok.val;
 import lombok.var;
 
-import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Locale;
@@ -18,6 +17,48 @@ public class Main {
         nf03.setMaximumFractionDigits(3);
     }
 
+    enum Column {
+        MaxTimeInQueue,
+        TimeInQueue,
+        Served,
+        TimeOfWaitingLock,
+        MaxTimeOfWaitingLock,
+        Queue;
+
+        String getColumnName () {
+            switch (this) {
+                case MaxTimeInQueue: {return "Max T. ";}
+                case TimeInQueue: {return "Time ";}
+                case Served: {return "Served ";}
+                case TimeOfWaitingLock: {return "Wait L ";}
+                case MaxTimeOfWaitingLock: {return "Max W.L ";}
+                case Queue: {return "Queue ";}
+                default: {return "";}
+            }
+        }
+
+        int getColumnWidth () {
+            switch (this) {
+                case MaxTimeInQueue:
+                case TimeInQueue:
+                case Served:
+                case TimeOfWaitingLock:
+                case MaxTimeOfWaitingLock: {return Math.max(getColumnName().length(), 7);}
+                case Queue: {return 20;}
+                default: {return 0;}
+            }
+        }
+
+        int getX () {
+            var x = 0;
+            for (var c : Column.values()) {
+                if (c == this) return x;
+                x += c.getColumnWidth();
+            }
+            return 0;
+        }
+    }
+
     public static void main (String[] args) {
         val nCustomers = 10000;
         new Thread(() -> {
@@ -28,27 +69,32 @@ public class Main {
                 ConsoleUtils.cls();
                 var y     = 1;
                 var total = 0;
-                ConsoleUtils.printf(0, y++, "Max T.  Time Served Queue");
+                for (val c : Column.values()) {
+                    ConsoleUtils.printf(c.getX(), y, c.getColumnName());
+                }
+                ++y;
                 for (Cashier cashier : cashiers) {
                     int    queueLength = cashier.getQueueLength();
                     char[] stars       = new char[queueLength];
                     Arrays.fill(stars, '*');
-                    ConsoleUtils.printf(20, y,
-                            String.format(String.format("%%-%ds", cashier.maxQueueLength), new String(stars)));
+                    ConsoleUtils.printf(Column.Queue.getX(), y,
+                            String.format("%%-%ds", cashier.maxQueueLength), new String(stars));
                     var customer = cashier.get(0);
                     if (customer != null) {
-                        ConsoleUtils.printf(0, y, String.format("%6d", cashier.maxTimeCustomerSpentInQueue));
-                        ConsoleUtils.printf(6, y, String.format("%6d", customer.getSpentTimeInLastQueue()));
+                        ConsoleUtils.printf(Column.MaxTimeInQueue.getX(), y, "%6d", cashier.maxTimeCustomerSpentInQueue);
+                        ConsoleUtils.printf(Column.TimeInQueue.getX(), y, "%6d", customer.getSpentTimeInLastQueue());
                     }
                     var served = cashier.nServed.get();
                     total += served;
-                    ConsoleUtils.printf(13, y, String.format("%6d", served));
+                    ConsoleUtils.printf(Column.Served.getX(), y, "%6d", served);
+                    ConsoleUtils.printf(Column.TimeOfWaitingLock.getX(), y, "%6d", cashier.waitingForLockTime);
+                    ConsoleUtils.printf(Column.MaxTimeOfWaitingLock.getX(), y, "%6d", cashier.maxWaitingForLockTime);
                     ++y;
                 }
-                ConsoleUtils.printf(6, y, String.format("Total: %6d", total));
+                ConsoleUtils.printf(0, y, "Total:");
+                ConsoleUtils.printf(Column.Served.getX(), y, "%6d", total);
                 if (total < nCustomers) {
-                    ConsoleUtils.printf(0, 0, String.format("Time: %s",
-                            nf03.format((System.currentTimeMillis() - startTime) / 1000f)));
+                    ConsoleUtils.printf(0, 0, "Time: %s", nf03.format((System.currentTimeMillis() - startTime) / 1000f));
                 }
                 try {
                     Thread.sleep(33);

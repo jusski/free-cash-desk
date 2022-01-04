@@ -3,7 +3,7 @@ package cash;
 import java.util.*;
 
 public class FastFoodRestaurant {
-    private static final int           NUMBER_OF_CASHIERS = 5;
+    private static final int           NUMBER_OF_CASHIERS = 2;
     private static final int           MAX_QUEUE_LENGTH   = 20;
     private static final List<Cashier> cashiers;
     public static final  Random        random             = new Random(123);
