@@ -29,7 +29,7 @@
     <Loggers>
         <Root level="info" additivity="false">
             <appender-ref ref="console"/>
-            <appender-ref ref="fileLogger"/>
+<!--            <appender-ref ref="fileLogger"/>-->
 <!--            <appender-ref ref="SQLDatabase"/>-->
         </Root>
         <Logger name="cash" level="debug" additivity="false">

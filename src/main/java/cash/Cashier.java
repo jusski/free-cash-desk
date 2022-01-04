@@ -143,7 +143,7 @@ public class Cashier implements Runnable {
                 log.debug(String.format("[%2d %3d] changed position to: %d", id, node.item.id, node.positionInQueue.get()));
             }
             semaphore.release();
-            log.debug(String.format("[%2d %3d] semaphore release (take)", id, node.item.id));
+            log.debug(String.format("[%2d    ] semaphore release (take)", id));
         } finally {
             lock.unlock();
             log.debug(String.format("[%2d    ] unlock (take)", id));
