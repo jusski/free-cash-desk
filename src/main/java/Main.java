@@ -1,6 +1,8 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import cash.ConsoleUtils;
+import cash.ConsoleUtils.Table;
 import lombok.val;
 
 public class Main
@@ -12,22 +14,36 @@ public class Main
 		public void run()
 		{
 			ConsoleUtils.cls();
-
-			ArrayList<Cashier> cashiers = FastFoodRestaurant.getCashiers();
+			
 			while (true)
 			{
-				for (int i = 0; i < cashiers.size(); ++i)
+				// for (int i = 0; i < cashiers.size(); ++i)
+				// {
+				// Cashier cashier = cashiers.get(i);
+				// int queueLength = cashier.queue.size();
+				// ConsoleUtils.println(0, i, String.format("%5d",
+				// queueLength));
+				// ConsoleUtils.println(10, i, String.format("%5d",
+				// cashier.lock.getQueueLength()));
+				// ConsoleUtils.println(20, i, String.format("%5d",
+				// cashier.lock.getReadHoldCount()));
+				// ConsoleUtils.println(30, i, String.format("%5d",
+				// cashier.lock.getReadLockCount()));
+				ArrayList<Cashier> cashiers = FastFoodRestaurant.getCashiers();
+			
+				Table table = ConsoleUtils.Table.createTable("              Queue");
+				
+				int row = 1;
+				for (Cashier cashier : cashiers)
 				{
-					Cashier cashier = cashiers.get(i);
-					int queueLength = cashier.queue.size();
-					ConsoleUtils.printf(0, i, String.format("%5d", queueLength));
-					ConsoleUtils.printf(10, i, String.format("%5d", cashier.lock.getQueueLength()));
-					ConsoleUtils.printf(20, i, String.format("%5d", cashier.lock.getReadHoldCount()));
-					ConsoleUtils.printf(30, i, String.format("%5d", cashier.lock.getReadLockCount()));
+					int size = cashier.getQueueLength();
+					char[] stars = new char[size];
+					Arrays.fill(stars, '*');
+					table.printColumn(row++, 0, new String(stars));
 				}
 				try
 				{
-					Thread.sleep(33);
+					Thread.sleep(100);
 				}
 				catch (InterruptedException e)
 				{
@@ -45,7 +61,7 @@ public class Main
 
 		new Thread(new DebugPrinter()).start();
 		Thread.sleep(2000);
-		for (int i = 0; i < 1000; ++i)
+		for (int i = 0; i < 50; ++i)
 		{
 			val visitor = new Visitor();
 			new Thread(visitor, "visitor " + i).start();
