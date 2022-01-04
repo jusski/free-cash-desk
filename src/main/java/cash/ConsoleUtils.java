@@ -16,4 +16,9 @@ public class ConsoleUtils
 		assert consoleDll != null;
 		System.load(consoleDll.getPath().substring(1));
     }
+    
+    static public void printf(int x, int y, String format, Object... args)
+    {
+    	printf(x, y, String.format(format, args));
+    }
 }
