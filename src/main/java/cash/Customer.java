@@ -6,6 +6,8 @@ import lombok.val;
 import java.util.Collection;
 import java.util.Comparator;
 
+import static cash.Restaurant.semaphore;
+
 @Log4j2
 public class Customer implements Runnable {
     private         Collection<Cashier> cashiers;
@@ -32,10 +34,12 @@ public class Customer implements Runnable {
 
     public void run () {
         log.debug(String.format("[   %3d] +enter", id));
-        cashiers = FastFoodRestaurant.getCashiers();
+        cashiers = Restaurant.getCashiers();
         try {
+            log.debug(String.format("[    %3d] waiting for semaphore", id));
+            semaphore.acquire();
+            log.debug(String.format("[    %3d] pass the semaphore", id));
             while (!served) {
-//                Thread.sleep(sleep);
                 val bestCashier = cashiers.stream()
                         .min(Comparator.comparingInt(Cashier::getQueueLength))
                         .filter(e -> node == null || e.getQueueLength() < node.positionInQueue.get())
@@ -52,6 +56,7 @@ public class Customer implements Runnable {
                         sleep = 10;
                     }
                 }
+                Thread.sleep(100);
             }
         } catch (Exception e) {
             e.printStackTrace();

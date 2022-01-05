@@ -10,7 +10,7 @@
             <PatternLayout pattern="[%-5level] %d{dd HH:mm:ss.SS} [%t] %c{1} - %msg%n"/>
             <Policies>
                 <OnStartupTriggeringPolicy/>
-                <SizeBasedTriggeringPolicy size="20 MB"/>
+                <SizeBasedTriggeringPolicy size="60 MB"/>
             </Policies>
         </RollingFile>
         <JDBC name="SQLDatabase" tableName="LOGS">
@@ -32,9 +32,9 @@
 <!--            <appender-ref ref="fileLogger"/>-->
 <!--            <appender-ref ref="SQLDatabase"/>-->
         </Root>
-        <Logger name="cash" level="debug" additivity="false">
+        <Logger name="cash" level="error" additivity="false">
             <appender-ref ref="console"/>
-<!--            <appender-ref ref="fileLogger"/>-->
+            <appender-ref ref="fileLogger"/>
 <!--            <appender-ref ref="SQLDatabase"/>-->
         </Logger>
     </Loggers>

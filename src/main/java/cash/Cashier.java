@@ -4,22 +4,19 @@ import lombok.extern.log4j.Log4j2;
 import lombok.val;
 import lombok.var;
 
-import java.util.concurrent.Semaphore;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static cash.FastFoodRestaurant.random;
+import static cash.Restaurant.semaphore;
 
 @Log4j2
 public class Cashier implements Runnable {
-
-
     private final AtomicInteger count    = new AtomicInteger();
     private final Node          head     = new Node(null);
     private final ReentrantLock lock     = new ReentrantLock(true);
-    private final Semaphore     semaphore;
     private final Condition     notEmpty = lock.newCondition();
 
     public int           id;
@@ -35,7 +32,6 @@ public class Cashier implements Runnable {
         this.id             = id;
         this.speed          = speed;
         this.maxQueueLength = maxQueueLength;
-        semaphore           = new Semaphore(maxQueueLength);
         head.previous       = head.next = head;
     }
 
@@ -60,7 +56,7 @@ public class Cashier implements Runnable {
             maxWaitingForLockTime = Math.max(maxWaitingForLockTime, waitingForLockTime);
             log.debug(String.format("[%2d    ]   lock (run)", id));
             try {
-                notEmpty.await(50, TimeUnit.MILLISECONDS);
+                notEmpty.await(500, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 ExceptionUtils.rethrowUnchecked(e);
             } finally {
@@ -88,9 +84,7 @@ public class Cashier implements Runnable {
 
     public Node put (Customer customer) throws InterruptedException {
         if (count.get() >= maxQueueLength) return null;
-        log.debug(String.format("[%2d %3d] waiting for semaphore (put)", id, customer.id));
-        semaphore.acquire();
-        log.debug(String.format("[%2d %3d] waiting for lock (put)", id, customer.id));
+        log.debug(String.format("[%2d %3d] waiting for lock (put) (%d)", id, customer.id, lock.getQueueLength()));
         lock.lock();
         log.debug(String.format("[%2d %3d]   lock (put)", id, customer.id));
 //        if (customer.served) return null;
@@ -184,8 +178,9 @@ public class Cashier implements Runnable {
             while ((node = node.next) != head) {
                 node.positionInQueue.getAndDecrement();
             }
-            semaphore.release();
             log.debug(String.format("[%2d %3d] semaphore release (remove)", id, customer.id));
+        } catch (Exception e) {
+            log.error(e.getMessage());
         } finally {
             lock.unlock();
             log.debug(String.format("[%2d %3d] unlock (remove)", id, customer.id));
@@ -194,9 +189,10 @@ public class Cashier implements Runnable {
     }
 
     public void serviceCustomer (Customer customer) throws InterruptedException {
-        Thread.sleep((long) (random.nextInt(100) / speed));
+        Thread.sleep((long) (new Random().nextInt(100) / speed));
         nServed.getAndIncrement();
+        Restaurant.nServed.getAndIncrement();
         customer.served = true;
-        log.debug(String.format("[%2d %3d] Food is offered, %d", id, customer.id, Thread.currentThread().getId()));
+        log.debug(String.format("[%2d %3d] Food is offered", id, customer.id));
     }
 }
