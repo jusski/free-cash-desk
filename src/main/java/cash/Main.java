@@ -125,7 +125,7 @@ public class Main {
         long[]       luckyThreads = new long[LUCKY_SIZE];
         Set<Integer> luckyNumbers = new HashSet<>();
         while (luckyNumbers.size() < LUCKY_SIZE) {
-            luckyNumbers.add(FastFoodRestaurant.random.nextInt(LUCKY_SIZE));
+            luckyNumbers.add(FastFoodRestaurant.random.nextInt(nCustomers));
         }
         var nLuckers = 0;
         for (int i = 0; i < nCustomers; ++i) {
@@ -142,7 +142,11 @@ public class Main {
             final ThreadInfo[] threadInfo = threadMXBean.getThreadInfo(luckyThreads, true, false);
             ConsoleUtils.currentLine = 10;
             for (val info : threadInfo) {
-                ConsoleUtils.println(String.valueOf(info.getWaitedCount()));
+                if (info == null) {
+                    ConsoleUtils.println("");
+                } else {
+                    ConsoleUtils.println(String.valueOf(info.getWaitedCount()));
+                }
             }
             Thread.sleep(100);
         }

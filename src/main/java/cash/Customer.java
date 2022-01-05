@@ -1,6 +1,7 @@
 package cash;
 
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 
 import java.util.Collection;
 import java.util.Comparator;
@@ -21,10 +22,6 @@ public class Customer implements Runnable {
         this.id = id;
     }
 
-    public void enterFastFoodRestaurant () {
-        cashiers = FastFoodRestaurant.getCashiers();
-    }
-
     public long getSpentTimeInQueue () {
         return putInQueueTime == 0 ? 0 : System.currentTimeMillis() - putInQueueTime;
     }
@@ -35,21 +32,21 @@ public class Customer implements Runnable {
 
     public void run () {
         log.debug(String.format("[   %3d] +enter", id));
-        enterFastFoodRestaurant();
+        cashiers = FastFoodRestaurant.getCashiers();
         try {
             while (!served) {
 //                Thread.sleep(sleep);
-                Cashier queue = cashiers.stream()
+                val bestCashier = cashiers.stream()
                         .min(Comparator.comparingInt(Cashier::getQueueLength))
                         .filter(e -> node == null || e.getQueueLength() < node.positionInQueue.get())
                         .orElse(cashier);
-                if (cashier != queue) {
+                if (cashier != bestCashier) {
 //                    log.debug(String.format("[%2d %3d] min queue len: %d (sleep: %d)",
 //                            queue.id, id, queue.getQueueLength(), sleep));
                     if (cashier != null) {
                         cashier.remove(this);
                     }
-                    if (queue.put(this) == null) {
+                    if (bestCashier.put(this) == null) {
                         sleep = Math.min(512, sleep << 1);
                     } else {
                         sleep = 10;
