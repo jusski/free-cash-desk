@@ -29,12 +29,12 @@ public class Main {
 
         String getColumnName () {
             switch (this) {
-                case MaxTimeInQueue: {return " Max T.";}
-                case TimeInQueue: {return " Time";}
-                case Served: {return " Served";}
-                case TimeOfWaitingLock: {return " Wait L";}
-                case MaxTimeOfWaitingLock: {return " Max W.L";}
-                case Queue: {return " Queue";}
+                case MaxTimeInQueue: {return "Max T. ";}
+                case TimeInQueue: {return "Time ";}
+                case Served: {return "Served ";}
+                case TimeOfWaitingLock: {return "Wait L ";}
+                case MaxTimeOfWaitingLock: {return "Max W.L ";}
+                case Queue: {return "Queue ";}
                 default: {return "";}
             }
         }
@@ -63,9 +63,10 @@ public class Main {
 
     public static void main (String[] args) throws InterruptedException {
         val nCustomers = 1000;
+        val cashiers   = FastFoodRestaurant.getCashiers();
+
         new Thread(() -> {
             ConsoleUtils.cls();
-            val cashiers = FastFoodRestaurant.getCashiers();
 
             val startTime = System.currentTimeMillis();
             while (true) {
@@ -126,13 +127,13 @@ public class Main {
         while (luckyNumbers.size() < LUCKY_SIZE) {
             luckyNumbers.add(FastFoodRestaurant.random.nextInt(LUCKY_SIZE));
         }
-        var j = 0;
+        var nLuckers = 0;
         for (int i = 0; i < nCustomers; ++i) {
             val visitor = new Customer(i);
             val thread  = new Thread(visitor);
             thread.start();
             if (luckyNumbers.contains(i)) {
-                luckyThreads[j++] = thread.getId();
+                luckyThreads[nLuckers++] = thread.getId();
             }
         }
         val threadMXBean = ManagementFactory.getThreadMXBean();
@@ -141,9 +142,7 @@ public class Main {
             final ThreadInfo[] threadInfo = threadMXBean.getThreadInfo(luckyThreads, true, false);
             ConsoleUtils.currentLine = 10;
             for (val info : threadInfo) {
-//                ConsoleUtils.println(String.valueOf(info.getWaitedCount()));
-//                ConsoleUtils.println("liaw");
-                ConsoleUtils.printf(0, ConsoleUtils.currentLine++, "liaw");
+                ConsoleUtils.println(String.valueOf(info.getWaitedCount()));
             }
             Thread.sleep(100);
         }
