@@ -12,7 +12,7 @@ public class Visitor implements Runnable
 			cashier = FastFoodRestaurant.getCashiers().stream().min(Comparator.comparingInt(Cashier::getQueueLength))
 					.get();
 			if (cashier.tryAdd(this)) break;
-			Thread.sleep(10);
+			Thread.sleep(100);
 		}
 
 	}

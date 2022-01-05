@@ -3,27 +3,24 @@ package cash;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Map.Entry;
 
 public class ConsoleUtils
 {
 	static public native void setCursorCoord(int x, int y);
 
-	static public native void cls();
+	static public native void clearScreen();
+	static public native void attachConsole();
 
 	static public native void printf(int x, int y, String string);
 
 	static int currentLine = 0;
-	private static boolean initialized = false;
 
 	static
 	{
-		URL consoleDll = ConsoleUtils.class.getResource("/console.dll");
-		assert consoleDll != null;
-		System.load(consoleDll.getPath().substring(1));
+		System.load("c:/LIB/Console/console.dll");
 	}
 
 	static public void printf(int x, int y, String format, Object... args)
@@ -36,19 +33,11 @@ public class ConsoleUtils
 		printf(0, currentLine++, format, args);
 	}
 	
-	static public void attachConsole()
-	{
-		if(!initialized)
-		{
-			cls();
-			initialized = true;
-		}
-		
-	}
+	
 
 	static public class Table
 	{
-		private HashMap<Integer, ColumnPorperties> columns = new HashMap<>();
+		private ArrayList<ColumnProperties> columns = new ArrayList<>();
 		private int column = 0;
 		private int columnOffset = 0;
 		private int tableOffset = 0;
@@ -71,15 +60,16 @@ public class ConsoleUtils
 			if (tables.containsKey(hashCode))
 			{
 				table = tables.get(hashCode);
+				currentLine += columnNames.length;
 			}
 			else
 			{
 				table = new Table(tableOffset, columnNames);
 				tables.put(hashCode, table);
-				table.printHeader();
+				
 				currentLine += columnNames.length;
 			}
-
+			table.printHeader();
 			return table;
 		}
 		
@@ -90,12 +80,12 @@ public class ConsoleUtils
 
 		public void addColumn(int x, String name)
 		{
-			ColumnPorperties columnPorperties = new ColumnPorperties();
+			ColumnProperties columnPorperties = new ColumnProperties();
 			columnPorperties.width = name.length();
 			columnPorperties.offset = columnOffset;
 			columnPorperties.name = name;
 
-			columns.put(x, columnPorperties);
+			columns.add(columnPorperties);
 
 			columnOffset += name.length() + 2;
 		}
@@ -107,11 +97,10 @@ public class ConsoleUtils
 
 		private void printHeader()
 		{
-			columns.entrySet().stream().sorted(Comparator.comparingInt(Entry::getKey))
-					.forEach(e -> printf(e.getValue().offset, tableOffset, e.getValue().name));
+			columns.stream().forEach(e -> printf(e.offset, tableOffset,	String.format("%" + e.width  + "s", e.name)));
 		}
 
-		private static class ColumnPorperties
+		private static class ColumnProperties
 		{
 			int width;
 			int offset;
@@ -120,14 +109,21 @@ public class ConsoleUtils
 
 		public void printColumn(int row, int column, String value)
 		{
-			if (columns.containsKey(column))
+			ColumnProperties c;
+			if ((c = columns.get(column)) != null)
 			{
-				ColumnPorperties c = columns.get(column);
+				if (value.length() > (c.width))
+				{
+					int offset = value.length() - c.width;
+					c.width = value.length();
+
+					for (int i = column + 1; i < columns.size(); ++i)
+					{
+						c = columns.get(i);
+						c.offset += offset;
+					}
+				}
 				printf(c.offset, row + tableOffset, "%" + c.width + "s", value);
-			}
-			else
-			{
-				throw new UnsupportedOperationException("no column was found: " + column);
 			}
 		}
 
@@ -143,7 +139,7 @@ public class ConsoleUtils
 			printColumn(row, column, String.valueOf(bd.doubleValue()));
 		}
 
-	}
+}
 
 	public static void main(String[] args) throws InterruptedException
 	{
@@ -151,8 +147,9 @@ public class ConsoleUtils
 		ConsoleUtils.attachConsole();
 		while (true)
 		{
-			ConsoleUtils.currentLine = 3;
+			ConsoleUtils.currentLine = 1;
 			println("some very interesting information");
+			println("");
 			Table table = Table.createTable("Time", "Calculation", "Average waiting", "Locks");
 
 			table.printColumn(1, 0, Math.random());
@@ -166,7 +163,7 @@ public class ConsoleUtils
 			println("another valuable information");
 			println("weather is today %d", 3);
 			
-			table = Table.createTable("Time21", "Calculation", "Average waiting", "Locks");
+			table = Table.createTable("Time21", "C", "A", "L");
 
 			table.printColumn(1, 0, Math.random());
 			table.printColumn(1, 2, Math.random());
@@ -175,8 +172,8 @@ public class ConsoleUtils
 			table.printColumn(2, 1, Math.random());
 			table.printColumn(2, 2, Math.random());
 			table.printColumn(2, 3, Math.random());
-			
-			Thread.sleep(100);
+//			clearScreen();
+			Thread.sleep(30);
 		}
 
 	}

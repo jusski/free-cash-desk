@@ -13,33 +13,23 @@ public class Main
 		@Override
 		public void run()
 		{
-			ConsoleUtils.cls();
+			ConsoleUtils.attachConsole();
 			
 			while (true)
 			{
-				// for (int i = 0; i < cashiers.size(); ++i)
-				// {
-				// Cashier cashier = cashiers.get(i);
-				// int queueLength = cashier.queue.size();
-				// ConsoleUtils.println(0, i, String.format("%5d",
-				// queueLength));
-				// ConsoleUtils.println(10, i, String.format("%5d",
-				// cashier.lock.getQueueLength()));
-				// ConsoleUtils.println(20, i, String.format("%5d",
-				// cashier.lock.getReadHoldCount()));
-				// ConsoleUtils.println(30, i, String.format("%5d",
-				// cashier.lock.getReadLockCount()));
 				ArrayList<Cashier> cashiers = FastFoodRestaurant.getCashiers();
 			
-				Table table = ConsoleUtils.Table.createTable("              Queue");
-				
+				Table table = ConsoleUtils.Table.createTable("Q", "R", "Queue");
 				int row = 1;
 				for (Cashier cashier : cashiers)
 				{
 					int size = cashier.getQueueLength();
 					char[] stars = new char[size];
 					Arrays.fill(stars, '*');
-					table.printColumn(row++, 0, new String(stars));
+					table.printColumn(row, 0, cashier.lock.getQueueLength());
+					table.printColumn(row, 1, cashier.lock.getReadHoldCount());
+					table.printColumn(row, 2, new String(stars));
+					row += 1;
 				}
 				try
 				{
@@ -47,7 +37,6 @@ public class Main
 				}
 				catch (InterruptedException e)
 				{
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
@@ -61,7 +50,7 @@ public class Main
 
 		new Thread(new DebugPrinter()).start();
 		Thread.sleep(2000);
-		for (int i = 0; i < 50; ++i)
+		for (int i = 0; i < 500; ++i)
 		{
 			val visitor = new Visitor();
 			new Thread(visitor, "visitor " + i).start();
